@@ -3,6 +3,13 @@ name = "sb-capture-browser"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[profile.release]
+lto = true
+opt-level = 3
+debug = false
+debug-assertions = false
 
 [dependencies]
+notify = "5.0.0"
+clap = { version = "4.0.29", features = ["cargo"] }
+tokio = { version = "1.23", features = ["sync", "rt", "macros", "rt-multi-thread", "time"] }
