@@ -7,7 +7,6 @@ use notify::{
 };
 use serde_json;
 use std::{
-    collections::{HashMap, VecDeque},
     fs::{self, File},
     io::Write,
     path::{Path, PathBuf},
