@@ -1,9 +1,13 @@
+mod data;
+use crate::data::bookmark::{Bookmarks, Child, Folder};
 use clap::{arg, command, value_parser};
 use notify::{
     event::{ModifyKind, RenameMode},
     Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher,
 };
+use serde_json;
 use std::{
+    collections::{HashMap, VecDeque},
     fs::{self, File},
     io::Write,
     path::{Path, PathBuf},
@@ -26,8 +30,16 @@ async fn check_file(file_path: String, check_interval: Duration, output_file: Fi
 
         if initial_modified_time != current_modified_time {
             let mut output_file = output_file.lock().unwrap();
+            let file_content = fs::read_to_string(file_path.clone()).unwrap();
+            let bookmarks: Bookmarks =
+                serde_json::from_str(&file_content).expect("Expected Bookmarks struct");
+            let captured_bookmarks = extract_bookmarks(&bookmarks.roots.bookmark_bar);
             output_file
-                .write_all("TASK_ID_{} The file's modification time has changed\n".as_bytes())
+                .write_all(
+                    serde_json::to_string(&captured_bookmarks)
+                        .unwrap()
+                        .as_bytes(),
+                )
                 .unwrap();
         }
     }
@@ -59,6 +71,22 @@ async fn check_directory(directory_path: String, output_file: FileMutex) {
                 .unwrap();
         }
     }
+}
+
+fn extract_bookmarks(folder: &Folder) -> Vec<Child> {
+    let mut bookmarks = Vec::new();
+    for child in &folder.children {
+        match child {
+            Child::Folder(f) => {
+                if f.name == "capture" {
+                    let folder_bookmarks = extract_bookmarks(f);
+                    bookmarks.extend(folder_bookmarks);
+                }
+            }
+            Child::Bookmark { .. } => bookmarks.push(child.clone()),
+        }
+    }
+    bookmarks
 }
 
 #[tokio::main]
